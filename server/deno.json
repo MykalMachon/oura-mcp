@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read --env-file --watch main.ts",
+    "start": "deno run --allow-net --allow-env --allow-read main.ts"
+  },
+  "imports": {
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.18.1",
+    "@types/express": "npm:@types/express@^5.0.3",
+    "cors": "npm:cors@^2.8.5",
+    "express": "npm:express@^5.1.0",
+    "zod": "npm:zod@^4.1.11"
+  }
+}
