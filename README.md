@@ -1,2 +1,3 @@
-# oura-mcp
-let your LLMs chat about your oura health data 
+# Oura MCP
+
+Let your LLMs chat about your Oura Ring's health data via an MCP server  
