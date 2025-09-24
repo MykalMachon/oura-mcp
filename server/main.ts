@@ -1,49 +1,143 @@
-export function add(a: number, b: number): number {
-  return a + b;
-}
-
-import express from 'express';
-import type { Request, Response} from 'express';
-
-import cors from 'cors';
-
-
+import { FastMCP } from "fastmcp";
 import { OuraApi } from "./client.ts";
 
+import * as v from 'valibot';
 
-const startServer = () => {
-// initialize server
-const app = express();
+const generateClientSideURL = () => {
+	const clientId = Deno.env.get('CLIENT_ID');
+	const clientSecret = Deno.env.get('CLIENT_SECRET');
+	const port = Deno.env.get('PORT') || 3000;
+	const redirectURL = Deno.env.get('REDIRECT_URL') || `http://localhost:${port}/auth/callback`
 
-// basic middlewares
-app.use(express.json());
-app.use(cors())
+	if (!clientId || !clientSecret) {
+		throw new Error('Missing CLIENT_ID or CLIENT_SECRET; check environment variables');
+	}
 
-// routes
-app.get('/', (req: Request, res: Response) => {
-  console.log('Received request for /');
-  res.send('Hello World!')
-})
+	// generate a random state string 
+	const state = crypto.randomUUID();
 
-// start web server
-const PORT = Deno.env.get('PORT') || 8000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+	const params = new URLSearchParams();
+	params.append('client_id', clientId);
+	params.append('state', state);
+	params.append('redirect_uri', redirectURL);
+	params.append('response_type', 'token');
 
-return app;
+	return `https://cloud.ouraring.com/oauth/authorize?${params.toString()}`
 }
- 
+
+const startServer = (): FastMCP => {
+	// setup the API key
+	const apiKey = Deno.env.get('API_KEY');
+	if (!apiKey) {
+		const signinUrl = generateClientSideURL();
+		console.log(`You don't have an API key yet!`)
+		console.log(signinUrl);
+		console.log('get your API key above...')
+		Deno.exit(0)
+	}
+
+	const api = new OuraApi(apiKey);
+
+	// setup the MCP server
+	const server: FastMCP = new FastMCP({
+		name: "Oura MCP",
+		version: "1.0.0",
+		health: {
+			enabled: true,
+			message: 'healthy!',
+			path: '/health',
+			status: 200,
+		},
+		ping: {
+			enabled: true,
+			intervalMs: 10_000,
+			logLevel: 'debug'
+		}
+	})
+
+	server.addTool({
+		name: 'daily-activity',
+		description: "get the user's daily activity for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this just fetches the current days data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args) => {
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getDailyActivity();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getDailyActivity(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	server.addTool({
+		name: 'daily-readiness',
+		description: "get the user's daily readiness for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this just fetches the current days data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args) => {
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getDailyReadiness();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getDailyReadiness(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	server.addTool({
+		name: 'daily-sleep',
+		description: "get the user's daily sleep for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this just fetches the current days data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args) => {
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getDailySleep();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getDailySleep(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	return server;
+}
 
 
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
-  // ensure the API_KEY is set
-  const apiKey = Deno.env.get('API_KEY');
-  if(!apiKey) throw new Error('API_KEY is not set');
+	// if you're missing your CLIENT_ID 
+	if (!Deno.env.get('CLIENT_ID') || !Deno.env.get('CLIENT_SECRET')) {
+		console.log('No CLIENT_ID/CLIENT_SECRET found in the environment! create an app here');
+		console.log('https://cloud.ouraring.com/oauth/applications')
+		Deno.exit(0);
+	}
 
-  // test the API 
-  const api = new OuraApi(apiKey);
-  const readiness = await api.getDailyReadiness();
-  console.log(readiness);
+	// if you're missing your API key
+	if (!Deno.env.get('API_KEY')) {
+		console.log('No API_KEY found in the environment! fetch one here')
+		console.log(generateClientSideURL());
+		Deno.exit(0);
+	}
+
+	// setup the server
+	const server = startServer();
+
+	// start the server
+	await server.start({
+		transportType: 'httpStream',
+		httpStream: {
+			port: parseInt(Deno.env.get('PORT') || '3000'),
+			stateless: true
+		}
+	})
 }
