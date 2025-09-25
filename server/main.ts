@@ -231,6 +231,7 @@ if (import.meta.main) {
 	await server.start({
 		transportType: 'httpStream',
 		httpStream: {
+			host: Deno.env.get('HOST') || '0.0.0.0',
 			port: parseInt(Deno.env.get('PORT') || '3000'),
 		}
 	})
