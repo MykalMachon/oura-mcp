@@ -1,7 +1,7 @@
-import { FastMCP } from "fastmcp";
+import { FastMCP } from "npm:fastmcp";
 import { OuraApi } from "./client.ts";
 
-import * as v from 'valibot';
+import * as v from 'npm:valibot';
 
 const generateClientSideURL = () => {
 	const clientId = Deno.env.get('CLIENT_ID');
@@ -88,7 +88,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args, context) => {
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -109,7 +109,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args, context) => {
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -130,7 +130,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args, context) => {
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -139,6 +139,90 @@ const startServer = (): FastMCP => {
 				return JSON.stringify(response);
 			} else {
 				const response = await api.getDailySleep(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	server.addTool({
+		name: 'heart-rate',
+		description: "get the user's heart rate data for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this just fetches the current days data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getHeartRate();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getHeartRate(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	server.addTool({
+		name: 'daily-stress',
+		description: "get the user's daily stress data for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this just fetches the current days data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getDailyStress();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getDailyStress(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	server.addTool({
+		name: 'workouts',
+		description: "get the user's workout data for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this fetches the last 7 days of data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getWorkouts();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getWorkouts(new Date(args.startDate), new Date(args.endDate));
+				return JSON.stringify(response);
+			}
+		}
+	})
+
+	server.addTool({
+		name: 'daily-spo2',
+		description: "get the user's daily blood oxygen (SpO2) data for a set of days. takes two dates in the YYYY-MM-DD format. If no date is provided this just fetches the current days data.",
+		parameters: v.object({
+			startDate: v.optional(v.string()),
+			endDate: v.optional(v.string()),
+		}),
+		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
+			if (!args.startDate || !args.endDate) {
+				const response = await api.getDailySPO2();
+				return JSON.stringify(response);
+			} else {
+				const response = await api.getDailySPO2(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
 		}

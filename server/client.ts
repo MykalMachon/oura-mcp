@@ -1,10 +1,17 @@
 // oura client
 
 import { throwOuraError } from "./client.errors.ts";
-import { DailyActivityResponse, DailyReadinessResponse, DailySleepResponse, PersonalInfo } from "./client.types.ts";
+import { DailyActivityResponse, DailyReadinessResponse, DailySleepResponse, HeartRateResponse, DailyStressResponse, WorkoutResponse, DailySPO2Response, PersonalInfo } from "./client.types.ts";
 
 const OURA_API_KEY = Deno.env.get("API_KEY");
 const OURA_BASE_URL = "https://api.ouraring.com/v2";
+
+/**
+ * Format a date as YYYY-MM-DD for Oura API daily endpoints
+ */
+function formatDateForOuraAPI(date: Date): string {
+	return date.toISOString().split('T')[0];
+}
 
 export class OuraApi {
 	private apiKey: string | undefined = OURA_API_KEY;
@@ -72,8 +79,8 @@ export class OuraApi {
 		}
 
 		const filters = new URLSearchParams();
-		filters.append("start_date", startDate.toISOString());
-		filters.append("end_date", endDate.toISOString());
+		filters.append("start_date", formatDateForOuraAPI(startDate));
+		filters.append("end_date", formatDateForOuraAPI(endDate));
 
 		const dailyActivity = await this._request<DailyActivityResponse>("/usercollection/daily_activity", {}, filters);
 
@@ -99,8 +106,8 @@ export class OuraApi {
 		}
 
 		const filters = new URLSearchParams();
-		filters.append("start_date", startDate.toISOString());
-		filters.append("end_date", endDate.toISOString());
+		filters.append("start_date", formatDateForOuraAPI(startDate));
+		filters.append("end_date", formatDateForOuraAPI(endDate));
 
 		const dailyReadiness = await this._request<DailyReadinessResponse>("/usercollection/daily_readiness", {}, filters);
 
@@ -123,8 +130,8 @@ export class OuraApi {
 		}
 
 		const filters = new URLSearchParams();
-		filters.append("start_date", startDate.toISOString());
-		filters.append("end_date", endDate.toISOString());
+		filters.append("start_date", formatDateForOuraAPI(startDate));
+		filters.append("end_date", formatDateForOuraAPI(endDate));
 
 		const sleepRoutes = await this._request<DailySleepResponse>("/usercollection/daily_sleep", {}, filters);
 
@@ -133,12 +140,12 @@ export class OuraApi {
 
 	/**
 	 * Get detailed heart rate data from Oura.
-	 * 
+	 *
 	 * @param {Date} startDateTime the start of the period you would like data for
 	 * @param {Date} endDateTime the end of the period you would like data for
 	 * @returns {Promise<HeartRateResponse>}
 	 */
-	async getHeartRate(startDateTime?: Date, endDateTime?: Date) {
+	async getHeartRate(startDateTime?: Date, endDateTime?: Date): Promise<HeartRateResponse> {
 		if (!startDateTime) {
 			startDateTime = new Date(new Date().setDate(new Date().getDate() - 1));
 		}
@@ -147,11 +154,92 @@ export class OuraApi {
 		}
 
 		const filters = new URLSearchParams();
-		filters.append("start_date", startDateTime.toISOString());
-		filters.append("end_date", endDateTime.toISOString());
+		filters.append("start_date", formatDateForOuraAPI(startDateTime));
+		filters.append("end_date", formatDateForOuraAPI(endDateTime));
 
-		const heartRate = await this._request("/usercollection/heartrate", {}, filters);
+		const heartRate = await this._request<HeartRateResponse>("/usercollection/heartrate", {}, filters);
 
 		return heartRate;
+	}
+
+	/**
+	 * Get daily stress data from Oura
+	 *
+	 * @param {Date} startDate the start of the period you would like data for
+	 * @param {Date} endDate the end of the period you would like data for
+	 * @returns {Promise<DailyStressResponse>}
+	 */
+	async getDailyStress(
+		startDate?: Date,
+		endDate?: Date,
+	): Promise<DailyStressResponse> {
+		if (!startDate) {
+			startDate = new Date(new Date().setDate(new Date().getDate() - 1));
+		}
+		if (!endDate) {
+			endDate = new Date();
+		}
+
+		const filters = new URLSearchParams();
+		filters.append("start_date", formatDateForOuraAPI(startDate));
+		filters.append("end_date", formatDateForOuraAPI(endDate));
+
+		const dailyStress = await this._request<DailyStressResponse>("/usercollection/daily_stress", {}, filters);
+
+		return dailyStress;
+	}
+
+	/**
+	 * Get workout data from Oura
+	 *
+	 * @param {Date} startDate the start of the period you would like data for
+	 * @param {Date} endDate the end of the period you would like data for
+	 * @returns {Promise<WorkoutResponse>}
+	 */
+	async getWorkouts(
+		startDate?: Date,
+		endDate?: Date,
+	): Promise<WorkoutResponse> {
+		if (!startDate) {
+			startDate = new Date(new Date().setDate(new Date().getDate() - 7)); // Default to last week for workouts
+		}
+		if (!endDate) {
+			endDate = new Date();
+		}
+
+		const filters = new URLSearchParams();
+		filters.append("start_date", formatDateForOuraAPI(startDate));
+		filters.append("end_date", formatDateForOuraAPI(endDate));
+
+		const workouts = await this._request<WorkoutResponse>("/usercollection/workout", {}, filters);
+
+		return workouts;
+	}
+
+	/**
+	 * Get daily blood oxygen data from Oura
+	 *
+	 * @param {Date} startDate the start of the period you would like data for
+	 * @param {Date} endDate the end of the period you would like data for
+	 * @returns {Promise<DailySPO2Response>}
+	 */
+	async getDailySPO2(
+		startDate?: Date,
+		endDate?: Date,
+	): Promise<DailySPO2Response> {
+		if (!startDate) {
+			startDate = new Date(new Date().setDate(new Date().getDate() - 1));
+		}
+		if (!endDate) {
+			endDate = new Date();
+		}
+
+		const filters = new URLSearchParams();
+		filters.append("start_date", formatDateForOuraAPI(startDate));
+		filters.append("end_date", formatDateForOuraAPI(endDate));
+
+		const dailySPO2 = await this._request<DailySPO2Response>("/usercollection/daily_spo2", {}, filters);
+
+		return dailySPO2;
 	}
 }

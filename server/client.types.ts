@@ -65,3 +65,66 @@ export type DailySleepResponse = {
 	data: DailySleep[];
 	nextToken: string | null;
 }
+
+export type HeartRateData = {
+	bpm: number;
+	source: string;
+	timestamp: string;
+};
+
+export type HeartRateResponse = {
+	data: HeartRateData[];
+	nextToken: string | null;
+}
+
+export type DailyStress = {
+	id: string;
+	day: string;
+	stress_high: number;
+	stress_average: number;
+	stress_low: number;
+	recovery_high: number;
+	recovery_average: number;
+	recovery_low: number;
+	timestamp: string;
+};
+
+export type DailyStressResponse = {
+	data: DailyStress[];
+	nextToken: string | null;
+};
+
+export type Workout = {
+	id: string;
+	day: string;
+	start_datetime: string;
+	end_datetime: string;
+	sport: string;
+	source: string;
+	calories: number;
+	distance: number | null;
+	duration: number;
+	intensity: string;
+	label: string | null;
+	source_name: string;
+	strain: number | null;
+	timestamp: string;
+};
+
+export type WorkoutResponse = {
+	data: Workout[];
+	nextToken: string | null;
+};
+
+export type DailySPO2 = {
+	id: string;
+	day: string;
+	contributors: Record<string, unknown>;
+	spo2_percentage: number | null;
+	timestamp: string;
+};
+
+export type DailySPO2Response = {
+	data: DailySPO2[];
+	nextToken: string | null;
+};
