@@ -3,7 +3,6 @@
 import { throwOuraError } from "./client.errors.ts";
 import { DailyActivityResponse, DailyReadinessResponse, DailySleepResponse, HeartRateResponse, DailyStressResponse, WorkoutResponse, DailySPO2Response, PersonalInfo } from "./client.types.ts";
 
-const OURA_API_KEY = Deno.env.get("API_KEY");
 const OURA_BASE_URL = "https://api.ouraring.com/v2";
 
 /**
@@ -14,7 +13,7 @@ function formatDateForOuraAPI(date: Date): string {
 }
 
 export class OuraApi {
-	private apiKey: string | undefined = OURA_API_KEY;
+	private apiKey: string;
 
 	constructor(apiKey: string) {
 		this.apiKey = apiKey;

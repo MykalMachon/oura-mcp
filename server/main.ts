@@ -1,5 +1,5 @@
 import { FastMCP } from "npm:fastmcp";
-import { OuraApi } from "./client.ts";
+import { OuraApi } from "./client/client.ts";
 
 import * as v from 'npm:valibot';
 
