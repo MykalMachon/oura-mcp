@@ -25,23 +25,49 @@ const generateClientSideURL = () => {
 	return `https://cloud.ouraring.com/oauth/authorize?${params.toString()}`
 }
 
+interface SessionData {
+	api: OuraApi,
+	[key: string]: unknown;
+}
+
 const startServer = (): FastMCP => {
-	// setup the API key
-	const apiKey = Deno.env.get('API_KEY');
-	if (!apiKey) {
-		const signinUrl = generateClientSideURL();
-		console.log(`You don't have an API key yet!`)
-		console.log(signinUrl);
-		console.log('get your API key above...')
-		Deno.exit(0)
-	}
-
-	const api = new OuraApi(apiKey);
-
 	// setup the MCP server
 	const server: FastMCP = new FastMCP({
 		name: "Oura MCP",
 		version: "1.0.0",
+		authenticate: async (request: any): Promise<SessionData> => {
+			const headers = request.headers ?? {}
+
+			// grab the api key
+			const getHeaderString = (header: string | string[] | undefined) =>
+				Array.isArray(header) ? header.join(", ") : (header ?? "N/A");
+
+			const authorization = getHeaderString(headers['authorization']);
+			if (!authorization) {
+				throw new Response(null, {
+					status: 401,
+					statusText: 'Unauthroized'
+				})
+			}
+
+			// create the api client
+			const api = new OuraApi(authorization);
+
+			// ensure the api can grab user information
+			try {
+				await api.getPersonalInfo();
+			} catch (err) {
+				throw new Response(null, {
+					status: 401,
+					statusText: 'Unauthroized'
+				})
+			}
+
+			// Authentication logic
+			return {
+				api: api
+			};
+		},
 		health: {
 			enabled: true,
 			message: 'healthy!',
@@ -62,7 +88,10 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args) => {
+		execute: async (args, context) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
 			if (!args.startDate || !args.endDate) {
 				const response = await api.getDailyActivity();
 				return JSON.stringify(response);
@@ -80,7 +109,10 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args) => {
+		execute: async (args, context) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
 			if (!args.startDate || !args.endDate) {
 				const response = await api.getDailyReadiness();
 				return JSON.stringify(response);
@@ -98,7 +130,10 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args) => {
+		execute: async (args, context) => {
+			const session = context.session as SessionData;
+			const api = session.api
+
 			if (!args.startDate || !args.endDate) {
 				const response = await api.getDailySleep();
 				return JSON.stringify(response);
@@ -137,7 +172,6 @@ if (import.meta.main) {
 		transportType: 'httpStream',
 		httpStream: {
 			port: parseInt(Deno.env.get('PORT') || '3000'),
-			stateless: true
 		}
 	})
 }
