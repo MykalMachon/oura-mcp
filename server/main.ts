@@ -1,29 +1,7 @@
-import { FastMCP } from "npm:fastmcp";
+import { FastMCP } from "fastmcp";
 import { OuraApi } from "./client/client.ts";
 
-import * as v from 'npm:valibot';
-
-const generateClientSideURL = () => {
-	const clientId = Deno.env.get('CLIENT_ID');
-	const clientSecret = Deno.env.get('CLIENT_SECRET');
-	const port = Deno.env.get('PORT') || 3000;
-	const redirectURL = Deno.env.get('REDIRECT_URL') || `http://localhost:${port}/auth/callback`
-
-	if (!clientId || !clientSecret) {
-		throw new Error('Missing CLIENT_ID or CLIENT_SECRET; check environment variables');
-	}
-
-	// generate a random state string 
-	const state = crypto.randomUUID();
-
-	const params = new URLSearchParams();
-	params.append('client_id', clientId);
-	params.append('state', state);
-	params.append('redirect_uri', redirectURL);
-	params.append('response_type', 'token');
-
-	return `https://cloud.ouraring.com/oauth/authorize?${params.toString()}`
-}
+import * as v from 'valibot';
 
 interface SessionData {
 	api: OuraApi,
@@ -35,13 +13,14 @@ const startServer = (): FastMCP => {
 	const server: FastMCP = new FastMCP({
 		name: "Oura MCP",
 		version: "1.0.0",
-		authenticate: async (request: any): Promise<SessionData> => {
+		authenticate: async (request: Request): Promise<SessionData> => {
 			const headers = request.headers ?? {}
 
 			// grab the api key
 			const getHeaderString = (header: string | string[] | undefined) =>
 				Array.isArray(header) ? header.join(", ") : (header ?? "N/A");
 
+			// @ts-ignore: this is fine
 			const authorization = getHeaderString(headers['authorization']);
 			if (!authorization) {
 				throw new Response(null, {
@@ -50,8 +29,19 @@ const startServer = (): FastMCP => {
 				})
 			}
 
+			// check if the bearer keyword is included
+			if (!authorization.toLowerCase().includes('bearer ')) {
+				throw new Response(null, {
+					status: 400,
+					statusText: 'Bad Request: Missing Bearer Token'
+				})
+			}
+
+			// pull out the API key
+			const apiKey = authorization.slice(7);
+
 			// create the api client
-			const api = new OuraApi(authorization);
+			const api = new OuraApi(apiKey);
 
 			// ensure the api can grab user information
 			try {
@@ -234,20 +224,6 @@ const startServer = (): FastMCP => {
 
 // Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
 if (import.meta.main) {
-	// if you're missing your CLIENT_ID 
-	if (!Deno.env.get('CLIENT_ID') || !Deno.env.get('CLIENT_SECRET')) {
-		console.log('No CLIENT_ID/CLIENT_SECRET found in the environment! create an app here');
-		console.log('https://cloud.ouraring.com/oauth/applications')
-		Deno.exit(0);
-	}
-
-	// if you're missing your API key
-	if (!Deno.env.get('API_KEY')) {
-		console.log('No API_KEY found in the environment! fetch one here')
-		console.log(generateClientSideURL());
-		Deno.exit(0);
-	}
-
 	// setup the server
 	const server = startServer();
 
