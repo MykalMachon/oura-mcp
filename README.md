@@ -96,29 +96,41 @@ The server will run on `http://localhost:3000` by default.
 
 ### Claude Desktop Configuration
 
-1. Open your Claude Desktop configuration file:
+Since this MCP server uses HTTP as a transport, you'll need to use `mcp-remote` as an intermediary to connect Claude Desktop to the HTTP server.
+
+1. Install `mcp-remote`:
+```bash
+npm install -g @modelcontextprotocol/remote
+```
+
+2. Start the Oura MCP server (in a separate terminal):
+```bash
+cd /path/to/oura-mcp/server
+deno task start
+```
+
+3. Open your Claude Desktop configuration file:
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-2. Add the Oura MCP server configuration:
+4. Add the Oura MCP server configuration using mcp-remote:
 
 ```json
 {
   "mcpServers": {
     "oura-mcp": {
-      "command": "deno",
-      "args": ["run", "--allow-net", "--allow-env", "--allow-read", "/path/to/oura-mcp/server/main.ts"],
+      "command": "mcp-remote",
+      "args": ["http://localhost:3000/mcp"],
       "env": {
-        "PORT": "3000"
+        "MCP_REMOTE_HEADERS": "{\"authorization\": \"Bearer YOUR_OURA_API_TOKEN_HERE\"}"
       }
     }
   }
 }
 ```
 
-3. Replace `/path/to/oura-mcp/server/main.ts` with the actual path to your cloned repository
-4. Restart Claude Desktop
-5. When Claude requests your Oura API token, provide the token you generated earlier
+5. Replace `YOUR_OURA_API_TOKEN_HERE` with your actual Oura API token
+6. Restart Claude Desktop
 
 ## Example Usage
 
