@@ -1,10 +1,15 @@
 import { FastMCP } from "fastmcp";
 import { OuraApi } from "./client/client.ts";
+import { mcpLogger } from "./utils/logger.ts";
+import { wrapToolExecution } from "./utils/tool-wrapper.ts";
+import * as http from "node:http";
 
 import * as v from 'valibot';
 
 interface SessionData {
-	api: OuraApi,
+	api: OuraApi;
+	sessionId: string;
+	userEmail: string;
 	[key: string]: unknown;
 }
 
@@ -13,7 +18,7 @@ const startServer = (): FastMCP => {
 	const server: FastMCP = new FastMCP({
 		name: "Oura MCP",
 		version: "1.0.0",
-		authenticate: async (request: Request): Promise<SessionData> => {
+		authenticate: async (request: http.IncomingMessage): Promise<SessionData> => {
 			const headers = request.headers ?? {}
 
 			// grab the api key
@@ -43,9 +48,10 @@ const startServer = (): FastMCP => {
 			// create the api client
 			const api = new OuraApi(apiKey);
 
-			// ensure the api can grab user information
+			// ensure the api can grab user information and extract email
+			let personalInfo;
 			try {
-				await api.getPersonalInfo();
+				personalInfo = await api.getPersonalInfo();
 			} catch (err) {
 				throw new Response(null, {
 					status: 401,
@@ -53,9 +59,18 @@ const startServer = (): FastMCP => {
 				})
 			}
 
+			// Generate session ID and extract user email
+			const sessionId = crypto.randomUUID();
+			const userEmail = personalInfo.email;
+
+			// Log session creation
+			mcpLogger.logSessionCreated(sessionId, userEmail);
+
 			// Authentication logic
 			return {
-				api: api
+				api: api,
+				sessionId: sessionId,
+				userEmail: userEmail
 			};
 		},
 		health: {
@@ -78,7 +93,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('daily-activity', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -89,7 +104,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getDailyActivity(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	server.addTool({
@@ -99,7 +114,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('daily-readiness', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -110,7 +125,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getDailyReadiness(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	server.addTool({
@@ -120,7 +135,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('daily-sleep', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -131,7 +146,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getDailySleep(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	server.addTool({
@@ -141,7 +156,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('heart-rate', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -152,7 +167,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getHeartRate(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	server.addTool({
@@ -162,7 +177,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('daily-stress', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -173,7 +188,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getDailyStress(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	server.addTool({
@@ -183,7 +198,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('workouts', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -194,7 +209,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getWorkouts(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	server.addTool({
@@ -204,7 +219,7 @@ const startServer = (): FastMCP => {
 			startDate: v.optional(v.string()),
 			endDate: v.optional(v.string()),
 		}),
-		execute: async (args: { startDate?: string; endDate?: string }, context: any) => {
+		execute: wrapToolExecution('daily-spo2', async (args: { startDate?: string; endDate?: string }, context: any) => {
 			const session = context.session as SessionData;
 			const api = session.api
 
@@ -215,7 +230,7 @@ const startServer = (): FastMCP => {
 				const response = await api.getDailySPO2(new Date(args.startDate), new Date(args.endDate));
 				return JSON.stringify(response);
 			}
-		}
+		})
 	})
 
 	return server;

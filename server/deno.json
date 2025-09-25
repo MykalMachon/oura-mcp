@@ -12,6 +12,7 @@
 		"express": "npm:express@^5.1.0",
 		"fastmcp": "npm:fastmcp@^3.18.0",
 		"valibot": "npm:valibot@^1.1.0",
+		"winston": "npm:winston@^3.17.0",
 		"zod": "npm:zod@^4.1.11"
 	}
 }
