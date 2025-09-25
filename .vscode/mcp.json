@@ -1,8 +1,19 @@
 {
+	"inputs": [
+		{
+			"type": "promptString",
+			"description": "oura ring api key",
+			"password": true,
+			"id": "oura-api-key"
+		}
+	],
 	"servers": {
 		"oura-mcp": {
 			"type": "http",
 			"url": "http://localhost:3000/mcp",
+			"headers": {
+				"authorization": "${input:oura-api-key}"
+			}
 		}
 	}
 }
